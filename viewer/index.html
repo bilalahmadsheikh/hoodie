@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oatmeal Hoodie 3D</title>
+<style>
+  :root { --bg:#f3f1ee; --ink:#3d3530; --muted:#7a6f66; --chip:#ffffffcc; --line:#d9d2ca; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#1d1b19; --ink:#efe8e1; --muted:#a99f96; --chip:#2a2724cc; --line:#3b3632; }
+  }
+  :root[data-theme="dark"] { --bg:#1d1b19; --ink:#efe8e1; --muted:#a99f96; --chip:#2a2724cc; --line:#3b3632; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  header { position:fixed; left:16px; top:14px; pointer-events:none; }
+  header h1 { margin:0; font-size:17px; font-weight:650; letter-spacing:.02em; }
+  header p { margin:2px 0 0; color:var(--muted); font-size:12.5px; }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:3px; background:#CCB8A6;
+    vertical-align:-1px; margin-right:5px; border:1px solid #0002; }
+  nav { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:flex; gap:6px;
+    background:var(--chip); border:1px solid var(--line); border-radius:999px; padding:5px;
+    backdrop-filter: blur(8px); max-width:calc(100vw - 32px); flex-wrap:wrap; justify-content:center; }
+  nav button { border:0; background:transparent; color:var(--ink); padding:7px 13px; border-radius:999px;
+    font:inherit; cursor:pointer; }
+  nav button:hover, nav button[aria-pressed="true"] { background:var(--line); }
+  #status { position:fixed; inset:0; display:grid; place-items:center; color:var(--muted); pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<header>
+  <h1>Pullover Hoodie</h1>
+  <p><span class="swatch"></span>Oatmeal / warm taupe · #CCB8A6 · drag to rotate, scroll to zoom</p>
+</header>
+<div id="status">Loading model…</div>
+<nav>
+  <button data-view="front" aria-pressed="true">Front</button>
+  <button data-view="three">3/4</button>
+  <button data-view="side">Side</button>
+  <button data-view="back">Back</button>
+  <button data-view="detail">Pocket</button>
+  <button id="spin">Spin</button>
+</nav>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const MODEL_URL = (new URLSearchParams(location.search).get('model')) || 'oatmeal_hoodie_realistic.glb';
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.78;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
+
+const scene = new THREE.Scene();
+const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#f3f1ee';
+scene.background = new THREE.Color(bg);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.95;
+
+// soft studio key + fill + rim
+const key = new THREE.DirectionalLight(0xfff6ee, 1.55);
+key.position.set(0.9, 1.9, 2.1);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.radius = 7; key.shadow.blurSamples = 16;
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.004;
+Object.assign(key.shadow.camera, { left:-0.9, right:0.9, top:1.3, bottom:-0.3, near:0.5, far:6 });
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xf3f4ff, 0.75); fill.position.set(-2, 0.8, 1.6); scene.add(fill);
+const front = new THREE.DirectionalLight(0xffffff, 0.45); front.position.set(0, 0.6, 3); scene.add(front);
+const rim = new THREE.DirectionalLight(0xffffff, 0.9); rim.position.set(-0.6, 1.5, -2.2); scene.add(rim);
+const back = new THREE.DirectionalLight(0xfff8f0, 1.1); back.position.set(1.2, 1.0, -2.0); scene.add(back);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cfc6, 0.25));
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity: 0.13 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.03; ground.receiveShadow = true;
+scene.add(ground);
+
+const camera = new THREE.PerspectiveCamera(30, 1, 0.02, 20);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.minDistance = 0.35; controls.maxDistance = 5;
+controls.target.set(0, 0.45, 0);
+
+const VIEWS = {
+  front:  { pos:[0, 0.52, 2.75], target:[0, 0.48, 0] },
+  three:  { pos:[1.6, 0.85, 2.2], target:[0, 0.47, 0] },
+  side:   { pos:[2.75, 0.55, 0.02], target:[0, 0.48, 0] },
+  back:   { pos:[0, 0.6, -2.75], target:[0, 0.48, 0] },
+  detail: { pos:[0.45, 0.42, 0.95], target:[0.02, 0.28, 0.1] },
+};
+function setView(name) {
+  const v = VIEWS[name]; if (!v) return;
+  camera.position.set(...v.pos); controls.target.set(...v.target); controls.update();
+  document.querySelectorAll('nav button[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === name));
+}
+document.querySelectorAll('nav button[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+let spin = false;
+document.getElementById('spin').onclick = (e) => { spin = !spin; e.target.setAttribute('aria-pressed', spin); };
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  camera.fov = w / h < 0.8 ? 42 : 30;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+const params = new URLSearchParams(location.search);
+setView(params.get('view') || 'front');
+
+new GLTFLoader().load(MODEL_URL, (gltf) => {
+  gltf.scene.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true; o.receiveShadow = true;
+      const m = o.material;
+      if (m.normalMap) m.normalMap.anisotropy = 8;
+      if (m.map) m.map.anisotropy = 8;
+    }
+  });
+  scene.add(gltf.scene);
+  document.getElementById('status').remove();
+  window.__ready = true;
+}, undefined, (err) => { document.getElementById('status').textContent = 'Could not load model: ' + err.message; });
+
+renderer.setAnimationLoop(() => {
+  if (spin) {
+    const t = controls.target, p = camera.position;
+    const a = 0.006, x = p.x - t.x, z = p.z - t.z;
+    p.x = t.x + x * Math.cos(a) - z * Math.sin(a); p.z = t.z + x * Math.sin(a) + z * Math.cos(a);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+window.__setView = setView;
+window.__still = () => { renderer.setAnimationLoop(null); controls.enableDamping = false; controls.update(); renderer.render(scene, camera); return canvas.toDataURL('image/png'); };
+</script>
+</body>
+</html>
