@@ -1,94 +1,82 @@
-# Realistic Cream-Beige Hoodie (3D) — GIK prints
+# GIK 13 14 Hoodie — 3D model, prints and production kit
 
-**Live 3D viewer:** https://claude.ai/artifact/3hkLLwRwZE3gaSFJWwWvRm
+A realistic 3D model of a cream-beige fleece pullover hoodie with three prints,
+plus everything needed to manufacture it, and a reusable pipeline for the next one.
+
+- **3D viewer:** https://claude.ai/artifact/3hkLLwRwZE3gaSFJWwWvRm
+- **Canva tech pack (for the maker):** https://www.canva.com/d/xtTl-yeRoKJjowQ (owner's Canva account)
+- **How it was built / how to make the next hoodie:** [`docs/`](docs/README.md)
 
 ![front print](renders/front_print_comparison.png)
 
 ![back print](renders/back_print_comparison.png)
 
-## Front print
+## The hoodie
 
-Two centred lines in dark chocolate-brown ink (`#43220A`), set in Comic Neue Bold
-(`artwork/fonts/`, SIL Open Font License), just below the draw-cord tips:
+| | |
+|---|---|
+| Fabric | Brushed cotton fleece, cream beige `#F2DCC0`; rib hem & cuffs `#ECD5B8` |
+| Trims | Self-colour draw-cords `#E8D1B4`, gunmetal aglets, embroidered eyelets, tonal topstitching |
+| Fit | Oversized, drop shoulder, kangaroo pocket, 2-panel hood with crossover V |
+| Front print | "Chai Phir Uzair kay kamray ma... !" / "01/06/27", Comic Neue Bold, ink `#43220A`, 29.8 × 4.1 cm, under the cord tips |
+| Sleeve print | "33", bold Comic Neue, ink `#43220A`, 6.3 × 4.7 cm, **wearer's right** outer upper arm |
+| Back print | "13 14 Guide to the GIK Institute" campus map, ink `#4E2E14`, 58 × 47.5 cm, under the hood |
 
-> Chai Phir Uzair kay kamray ma... !
-> 01/06/27
+## Quick start
 
-The first line is 30 cm wide. It is the `Front_Print` object (material `Front_Print_Ink`).
-To change the wording, size or position, edit `FRONT_LINES`, `FRONT_TEXT_W` and
-`FRONT_TEXT_CY` in `build_hoodie.py` and rebuild.
+```bash
+pip install -r requirements.txt
+```
 
-![comparison](renders/comparison_sheet.png)
+```bash
+cd tools && npm install && npx playwright install chromium && cd ..
+```
 
-## Sleeve print
+```bash
+tools/build_all.sh
+```
 
-A small **33** (4.4 cm tall, extra-bold digits in the same font and ink as the front) on the outer upper arm,
-at bicep/tricep height, of the wearer's right sleeve (x < 0, the one on the left in the front
-view). It sits just below the drop-shoulder seam. It is the `Sleeve_Print` object.
-`SLEEVE_SIDE = 1` in `build_hoodie.py` moves it to the other sleeve; `SLEEVE_ANCHOR`,
-`SLEEVE_TEXT` and `SLEEVE_TEXT_H` change its position, text and size.
+That rebuilds the model, the printer files, all renders, the tech-pack PDF and the
+shareable viewer package. To iterate quickly on the model only:
 
-## Back print
+```bash
+QUICK=1 python build_hoodie.py
+```
 
-The back carries the **"13 14 Guide to the GIK Institute"** map (`artwork/gik_map_artwork.webp`),
-placed like the mock-up (`artwork/back_print_mockup_reference.webp`): centred under the hood,
-58 cm wide, running down to just above the rib hem.
-
-- The parchment background is removed, so only the sepia-brown ink (`#4E2E14`) is printed and
-  the fleece shows through, like a real screen print (`artwork/gik_map_back_print.png`).
-- It is its own object, `Back_Print`, a thin decal that follows the folds of the back panel
-  (0.8 mm above it). Its material, `Back_Print_Ink`, keeps the fleece knit texture. To swap
-  the artwork, replace the PNG (or `PRINT_SRC` in `build_hoodie.py`) and rebuild.
-
-A rebuilt, more realistic version of the *Oatmeal Taupe Hoodie 3D Editable Kit* (the original is kept in `original_kit/`).
-The proportions and colour were matched to the reference product photo.
-
-## Files
+## What's where
 
 | Path | What |
 |---|---|
-| `model/oatmeal_hoodie_realistic.glb` | **Main model** (glTF 2.0, PBR + fleece sheen, textures embedded) |
-| `model/oatmeal_hoodie_realistic_obj.zip` | OBJ + MTL + textures, for tools without glTF |
-| `model/textures/` | Tiling jersey-fleece / rib-knit normal maps and grain colour maps |
-| `viewer/index.html` | three.js studio viewer (finds `../model/*.glb` automatically; serve over http) |
-| `renders/` | Front, 3/4, side, back and pocket close-up renders |
-| `build_hoodie.py` | Generator: run it to rebuild everything |
-| `tools/render.js` | Headless render script (Playwright) |
+| `build_hoodie.py` | **The generator.** All settings (colours, sizes, prints, placements) are constants at the top. |
+| `model/oatmeal_hoodie_realistic.glb` | Main 3D model (glTF 2.0, PBR + fleece sheen, each part and print a separate object) |
+| `model/oatmeal_hoodie_realistic_obj.zip` | OBJ + MTL + textures |
+| `production/print_*_300dpi.png` | **Print-ready files** for the printer (transparent, 300 DPI, actual size) |
+| `production/GIK_hoodie_tech_pack.pdf` | 6-page tech pack (specs, colours, placements, construction) |
+| `viewer/index.html` | three.js 3D viewer with camera presets |
+| `renders/` | Every view, plus comparison sheets against the mock-ups |
+| `artwork/` | Source artwork, mock-up references, font (Comic Neue, SIL OFL) |
+| `tools/` | Render, print export, tech-pack PDF, viewer packaging, `build_all.sh` |
+| `docs/` | Full write-up of the process, how to change things, lessons learned |
+| `original_kit/` | The basic kit this started from |
 
-## What changed vs. the original kit
+## Docs
 
-| Original | Realistic version |
-|---|---|
-| Separate tubes intersecting, puffy "balloon" sleeves | One continuous fabric shell (SDF + marching cubes), natural armpit blend |
-| Helmet-like round hood | Upright hood with a rolled front edge, V crossover at the neck and a centre-back seam |
-| Short, boxy body | Oversized drop-shoulder fit, proportions measured off the photo |
-| No folds | Drape folds, elbow creases, stacked folds above the cuffs, blousing over the rib hem |
-| Flat colours | Jersey-fleece and 1x1 rib normal maps, fabric grain, `KHR_materials_sheen` brushed-fleece sheen, baked ambient occlusion and heather mottle |
-| Solid stitch tubes | Dashed tonal topstitching on the pocket, hem, cuffs, armholes, shoulders, side seams and hood |
-| Thin cords | Draw-cords that hang over the chest, with gunmetal aglets and eyelets |
-
-**Colour:** creamy beige, fabric albedo `#F2DCC0` (rib `#ECD5B8`). Under the studio lighting it renders at RGB ≈ 234/211/184, against ≈ 239/215/184 for the fabric in the print mock-ups.
+1. [Workflow and setup](docs/01-workflow.md)
+2. [The 3D model](docs/02-3d-model.md)
+3. [Prints](docs/03-prints.md)
+4. [Viewer and sharing](docs/04-viewer-and-sharing.md)
+5. [Production files and Canva](docs/05-production-and-canva.md)
+6. [New hoodie checklist](docs/06-new-hoodie-checklist.md)
+7. [Lessons learned](docs/07-lessons-learned.md)
 
 ## Editing in Blender
 
-`File → Import → glTF 2.0` and pick `oatmeal_hoodie_realistic.glb`. The pieces are separate objects:
+`File → Import → glTF 2.0` → `model/oatmeal_hoodie_realistic.glb`. Objects:
 `Front_Body`, `Back_Body`, `Kangaroo_Pocket`, `Sleeve_Left/Right`, `Hood`, `Rib_Hem`,
-`Rib_Cuff_Left/Right`, `Topstitching`, `Drawcords`, `Drawcord_Eyelets`, `Aglets`.
+`Rib_Cuff_Left/Right`, `Topstitching`, `Drawcords`, `Drawcord_Eyelets`, `Aglets`,
+`Front_Print`, `Sleeve_Print`, `Back_Print`. Units are metres, Y up, +Z front, and
++X is the wearer's left. Baked shading is in the `Color` attribute.
 
-- **Recolour:** change *Base Color* on `Fleece_Oatmeal` / `Rib_Knit_Oatmeal`, or edit `FABRIC_HEX` in `build_hoodie.py`.
-- **Baked shading:** ambient occlusion lives in the `Color` attribute (COLOR_0), which multiplies the base colour.
-- **UVs:** tiled at 1 UV unit = 5 cm, so the fabric texture repeats. For a print or logo, add a decal or a second UV map on `Front_Body` / `Back_Body`.
-- **Units:** metres. Y is up and +Z is the front.
-
-## Rebuild
-
-```bash
-pip install numpy scipy scikit-image trimesh fast-simplification pygltflib pillow
-```
-
-```bash
-python build_hoodie.py
-```
-
-`QUICK=1 python build_hoodie.py` does a fast low-resolution preview build.
-The model is about 357k triangles. It is a static garment, not rigged or set up for cloth simulation.
+The model is about 360k triangles. It is a static garment, not rigged or set up for
+cloth simulation. Garment measurements are the model's oversized proportions; grade
+to your own size chart.

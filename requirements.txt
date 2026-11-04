@@ -1,0 +1,7 @@
+numpy
+scipy
+scikit-image
+trimesh
+fast-simplification
+pygltflib
+Pillow

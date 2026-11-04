@@ -1,0 +1,9 @@
+{
+  "name": "hoodie-tools",
+  "private": true,
+  "description": "Headless rendering and tech-pack PDF export for the hoodie repo",
+  "dependencies": {
+    "playwright": "1.49.1",
+    "three": "0.170.0"
+  }
+}
