@@ -1,0 +1,17 @@
+{
+  "back": {
+    "file": "print_back_GIK_map_58x48cm_300dpi.png",
+    "width_cm": 58.0,
+    "height_cm": 47.5
+  },
+  "front": {
+    "file": "print_front_text_30cm_300dpi.png",
+    "width_cm": 29.8,
+    "height_cm": 4.1
+  },
+  "sleeve": {
+    "file": "print_sleeve_33_4.4cm_300dpi.png",
+    "width_cm": 6.3,
+    "height_cm": 4.7
+  }
+}
