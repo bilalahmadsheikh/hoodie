@@ -73,9 +73,10 @@ FRONT_TEXT_CY = 0.418               # centre height of the two-line block
 # wearer's right sleeve (x < 0, the one on the left in the front view).
 SLEEVE_TEXT = "33"
 SLEEVE_PNG = ART_DIR / "sleeve_33_print.png"
-SLEEVE_TEXT_H = 0.034               # cap height of the digits, metres
+SLEEVE_TEXT_H = 0.044               # cap height of the digits, metres
+SLEEVE_BOLD = 0.026                 # extra stroke weight, as a fraction of the font size
 SLEEVE_SIDE = -1                    # -1: wearer's right sleeve; +1: wearer's left
-SLEEVE_ANCHOR = np.array([0.336, 0.448, 0.000])  # upper-arm point on the sleeve centre-line
+SLEEVE_ANCHOR = np.array([0.332, 0.461, 0.000])  # upper-arm point on the sleeve centre-line
 SLEEVE_FACING = np.array([0.92, 0.0, 0.38])       # outer side of the arm, turned slightly forward
 
 
@@ -1006,10 +1007,11 @@ def make_sleeve_text_texture(size=320, pad=24):
     """Render the sleeve number as ink-only RGBA; returns (aspect, cap height fraction)."""
     from PIL import ImageDraw, ImageFont
     font = ImageFont.truetype(str(FRONT_FONT), size)
-    l, t, r, b = font.getbbox(SLEEVE_TEXT)
+    sw = round(size * SLEEVE_BOLD)          # thicken the strokes for a bolder look
+    l, t, r, b = font.getbbox(SLEEVE_TEXT, stroke_width=sw)
     w, h = (r - l) + 2 * pad, (b - t) + 2 * pad
     mask = Image.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).text((pad - l, pad - t), SLEEVE_TEXT, font=font, fill=255)
+    ImageDraw.Draw(mask).text((pad - l, pad - t), SLEEVE_TEXT, font=font, fill=255, stroke_width=sw, stroke_fill=255)
     rgba = np.zeros((h, w, 4), np.uint8)
     rgba[..., :3] = [int(FRONT_INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
     rgba[..., 3] = np.asarray(mask)
