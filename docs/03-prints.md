@@ -32,19 +32,33 @@ art needs a different approach: keep its RGB and use its own alpha.
 | Setting | Value |
 |---|---|
 | `FRONT_LINES` | `["Chai Phir Uzair kay kamray ma... !", "01/06/27"]` |
-| `FRONT_FONT` | `artwork/fonts/ComicNeue-Bold.woff` (SIL OFL, free for commercial use) |
+| `FRONT_FONT` | `artwork/fonts/Fredoka-Bold.woff` (thick rounded block letters; SIL OFL, free for commercial use). Also used for the sleeve. |
+| `FRONT_BOLD` | `0.0`, optional extra outline stroke to make any font heavier |
 | `FRONT_TEXT_W` | `0.30`, the first line's width (30 cm) |
 | `FRONT_TEXT_CY` | `0.418`, the block's centre height, just under the cord tips |
 | `FRONT_INK_HEX` | `#43220A` |
 
 Text is rendered from the font file, so it is crisp at any size.
 
+### Engraved look (front text and sleeve number)
+
+The text decals look pressed into the fleece. `engrave_maps()` turns the text mask into
+a height map (letter floor `ENGRAVE_DEPTH_MM` = 1.4 mm deep, sloped walls
+`ENGRAVE_BEVEL_MM` = 1.3 mm wide), then into a normal map on the print's own UVs, plus a
+little shade in the recess (`ENGRAVE_SHADE`). Lighting then catches the walls like a
+carved letter: the top edge is shaded and the bottom edge lit. Set `ENGRAVE = False` for
+a flat screen print.
+
+In production this corresponds to a **deboss** (letters heat-pressed into the fabric)
+filled with ink. Confirm the technique and depth with the maker; a flat screen print
+from the same file is the fallback.
+
 ### Sleeve: "33"
 | Setting | Value |
 |---|---|
 | `SLEEVE_TEXT` | `"33"` |
 | `SLEEVE_TEXT_H` | `0.044`, digit height (4.4 cm) |
-| `SLEEVE_BOLD` | `0.026`, extra outline stroke as a fraction of the font size (heavier look) |
+| `SLEEVE_BOLD` | `0.0`, optional extra outline stroke as a fraction of the font size |
 | `SLEEVE_SIDE` | `-1` = **wearer's right** sleeve; `+1` = wearer's left |
 | `SLEEVE_ANCHOR` | point on the sleeve centre-line; its Y sets the height |
 | `SLEEVE_FACING` | which way the print faces (outer arm, slightly forward) |

@@ -63,20 +63,30 @@ EXTRA_UV1 = {}                      # part name -> second UV set (fabric tiling)
 
 # Front print: two centred lines of rounded handwriting, just below the cord tips.
 FRONT_LINES = ["Chai Phir Uzair kay kamray ma... !", "01/06/27"]
-FRONT_FONT = ART_DIR / "fonts" / "ComicNeue-Bold.woff"   # SIL Open Font License
+FRONT_FONT = ART_DIR / "fonts" / "Fredoka-Bold.woff"     # thick rounded block letters; SIL Open Font License
 FRONT_PNG = ART_DIR / "front_text_print.png"
 FRONT_INK_HEX = "#43220A"           # dark chocolate brown, sampled from the mock-up
 FRONT_TEXT_W = 0.30                 # metres across the first line
 FRONT_TEXT_CY = 0.418               # centre height of the two-line block
+FRONT_BOLD = 0.0                    # optional extra outline stroke (fraction of font size); Fredoka Bold is already heavy
+FRONT_NORMAL_PNG = ART_DIR / "front_text_engrave_normal.png"
+
+# Engraved look for the front text and the sleeve number: each letter is pressed into
+# the fleece, with a sunken floor, bevelled walls and a little shade in the recess.
+ENGRAVE = True
+ENGRAVE_DEPTH_MM = 1.4              # how deep the letters sit below the fabric surface
+ENGRAVE_BEVEL_MM = 1.3              # width of the sloped wall around each letter
+ENGRAVE_SHADE = 0.15                # darkening of the recess next to the walls (0 = none)
 
 # Sleeve print: a small "33" on the outer upper arm (bicep/tricep height) of the
 # wearer's right sleeve (x < 0, the one on the left in the front view).
 SLEEVE_TEXT = "33"
 SLEEVE_PNG = ART_DIR / "sleeve_33_print.png"
+SLEEVE_NORMAL_PNG = ART_DIR / "sleeve_33_engrave_normal.png"
 SLEEVE_TEXT_H = 0.044               # cap height of the digits, metres
-SLEEVE_BOLD = 0.026                 # extra stroke weight, as a fraction of the font size
+SLEEVE_BOLD = 0.0                   # extra stroke weight, as a fraction of the font size
 SLEEVE_SIDE = -1                    # -1: wearer's right sleeve; +1: wearer's left
-SLEEVE_ANCHOR = np.array([0.332, 0.461, 0.000])  # upper-arm point on the sleeve centre-line
+SLEEVE_ANCHOR = np.array([0.334, 0.451, 0.000])  # upper-arm point on the sleeve centre-line
 SLEEVE_FACING = np.array([0.92, 0.0, 0.38])       # outer side of the arm, turned slightly forward
 
 
@@ -870,6 +880,8 @@ def write_glb(parts, path):
     t_pr = add_tex(PRINT_PNG, sampler=1)
     t_fp = add_tex(FRONT_PNG, sampler=1)
     t_sp = add_tex(SLEEVE_PNG, sampler=1)
+    t_fpn = add_tex(FRONT_NORMAL_PNG, sampler=1) if ENGRAVE else None
+    t_spn = add_tex(SLEEVE_NORMAL_PNG, sampler=1) if ENGRAVE else None
 
     def fabric(name, hexcode, color_tex, normal_tex, nscale, rough, sheen=1.0):
         c = srgb_to_linear(hexcode)
@@ -885,12 +897,15 @@ def write_glb(parts, path):
             m.normalTexture = G.NormalMaterialTexture(index=normal_tex, scale=nscale)
         return m
 
-    def ink(name, tex):
+    def ink(name, tex, engrave_normal=None):
+        # engraved prints use their own bevel normal map (on the print UVs); flat prints keep the knit
+        nt = (G.NormalMaterialTexture(index=engrave_normal, texCoord=0, scale=1.0) if engrave_normal is not None
+              else G.NormalMaterialTexture(index=t_jn, texCoord=1, scale=0.55))
         return G.Material(name=name, alphaMode="BLEND", doubleSided=False,
                           pbrMetallicRoughness=G.PbrMetallicRoughness(
                               baseColorFactor=[1.0, 1.0, 1.0, 1.0], baseColorTexture=G.TextureInfo(index=tex),
                               metallicFactor=0.0, roughnessFactor=0.88),
-                          normalTexture=G.NormalMaterialTexture(index=t_jn, texCoord=1, scale=0.55),
+                          normalTexture=nt,
                           extensions={"KHR_materials_sheen": {"sheenColorFactor": [0.12, 0.09, 0.07], "sheenRoughnessFactor": 0.6}})
 
     materials = [
@@ -902,8 +917,8 @@ def write_glb(parts, path):
             baseColorFactor=[*srgb_to_linear(AGLET_HEX).tolist(), 1.0], metallicFactor=1.0, roughnessFactor=0.32)),
         # water-based screen-print ink: sits in the fleece, keeps the knit texture
         ink("Back_Print_Ink", t_pr),
-        ink("Front_Print_Ink", t_fp),
-        ink("Sleeve_Print_Ink", t_sp),
+        ink("Front_Print_Ink", t_fp, t_fpn),
+        ink("Sleeve_Print_Ink", t_sp, t_spn),
     ]
     mat_index = {m.name: i for i, m in enumerate(materials)}
 
@@ -959,6 +974,28 @@ def make_print_texture(width=2048):
     return width / h
 
 
+def engrave_maps(mask, px_per_mm, ink_hex):
+    """From an anti-aliased text mask, build (RGBA ink texture, tangent-space normal map)
+    for letters pressed into the fabric: floor ENGRAVE_DEPTH_MM deep, walls ENGRAVE_BEVEL_MM wide."""
+    from scipy.ndimage import distance_transform_edt, gaussian_filter
+    m = np.asarray(mask).astype(float) / 255.0
+    d_in = distance_transform_edt(m > 0.5) / px_per_mm                  # mm from the letter edge
+    wall = smoothstep(0.0, ENGRAVE_BEVEL_MM, d_in)
+    height = -ENGRAVE_DEPTH_MM * wall * (m > 0.5)                      # mm, negative = below surface
+    height = gaussian_filter(height, 0.6)
+    gx = (np.roll(height, -1, 1) - np.roll(height, 1, 1)) * 0.5 * px_per_mm   # mm per mm
+    gy = (np.roll(height, -1, 0) - np.roll(height, 1, 0)) * 0.5 * px_per_mm
+    n = np.stack([-gx, gy, np.ones_like(height)], -1)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+    normal = ((n * 0.5 + 0.5) * 255).round().astype(np.uint8)
+    shade = 1.0 - ENGRAVE_SHADE * (1.0 - smoothstep(ENGRAVE_BEVEL_MM * 0.6, ENGRAVE_BEVEL_MM * 2.6, d_in))
+    rgba = np.zeros(m.shape + (4,), np.uint8)
+    ink = np.array([int(ink_hex[i:i + 2], 16) for i in (1, 3, 5)], float)
+    rgba[..., :3] = np.clip(ink[None, None, :] * shade[..., None], 0, 255).round()
+    rgba[..., 3] = (m * 255).round()
+    return rgba, normal
+
+
 def make_front_text_texture(width=2400, pad=40):
     """Render the front slogan as ink-only RGBA; returns the image aspect (w/h)."""
     from PIL import ImageDraw, ImageFont
@@ -967,19 +1004,20 @@ def make_front_text_texture(width=2400, pad=40):
     size = int(200 * (width - 2 * pad) / w0)
     sizes = [size, int(size * 0.92)]           # the date is set a touch smaller
     fonts = [ImageFont.truetype(str(FRONT_FONT), s) for s in sizes]
+    strokes = [round(s * FRONT_BOLD) for s in sizes]
     asc, desc = fonts[0].getmetrics()
     line_gap = int((asc + desc) * 1.12)
     h = pad * 2 + line_gap + sum(f.getmetrics()[0] + f.getmetrics()[1] for f in fonts[1:])
     mask = Image.new("L", (width, h), 0)
     d = ImageDraw.Draw(mask)
     y = pad
-    for line, f in zip(FRONT_LINES, fonts):
-        d.text((width / 2, y), line, font=f, fill=255, anchor="ma")
+    for line, f, sw in zip(FRONT_LINES, fonts, strokes):
+        d.text((width / 2, y), line, font=f, fill=255, anchor="ma", stroke_width=sw, stroke_fill=255)
         y += line_gap
-    rgba = np.zeros((h, width, 4), np.uint8)
-    rgba[..., :3] = [int(FRONT_INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
-    rgba[..., 3] = np.asarray(mask)
+    px_per_mm = (width - 2 * pad) / (FRONT_TEXT_W * 1000)
+    rgba, normal = engrave_maps(mask, px_per_mm, FRONT_INK_HEX)
     Image.fromarray(rgba, "RGBA").save(FRONT_PNG, optimize=True)
+    Image.fromarray(normal, "RGB").save(FRONT_NORMAL_PNG, optimize=True)
     return width / h, (width - 2 * pad) / width
 
 
@@ -1003,7 +1041,7 @@ def build_print_decal(shell, lab, N, colors, piece, width, height, y_top, facing
     return Vd, n, colors[uniq], uv[uniq], inv.reshape(-1, 3), uv1
 
 
-def make_sleeve_text_texture(size=320, pad=24):
+def make_sleeve_text_texture(size=900, pad=60):
     """Render the sleeve number as ink-only RGBA; returns (aspect, cap height fraction)."""
     from PIL import ImageDraw, ImageFont
     font = ImageFont.truetype(str(FRONT_FONT), size)
@@ -1012,10 +1050,10 @@ def make_sleeve_text_texture(size=320, pad=24):
     w, h = (r - l) + 2 * pad, (b - t) + 2 * pad
     mask = Image.new("L", (w, h), 0)
     ImageDraw.Draw(mask).text((pad - l, pad - t), SLEEVE_TEXT, font=font, fill=255, stroke_width=sw, stroke_fill=255)
-    rgba = np.zeros((h, w, 4), np.uint8)
-    rgba[..., :3] = [int(FRONT_INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
-    rgba[..., 3] = np.asarray(mask)
+    px_per_mm = (b - t) / (SLEEVE_TEXT_H * 1000)
+    rgba, normal = engrave_maps(mask, px_per_mm, FRONT_INK_HEX)
     Image.fromarray(rgba, "RGBA").save(SLEEVE_PNG, optimize=True)
+    Image.fromarray(normal, "RGB").save(SLEEVE_NORMAL_PNG, optimize=True)
     return w / h, (b - t) / h
 
 

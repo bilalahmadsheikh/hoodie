@@ -13,7 +13,7 @@ Writes to `production/` (transparent PNG, 300 DPI, actual print size; sizes also
 |---|---|
 | `print_back_GIK_map_58x48cm_300dpi.png` | 58 × 47.5 cm |
 | `print_front_text_30cm_300dpi.png` | 29.8 × 4.1 cm |
-| `print_sleeve_33_4.4cm_300dpi.png` | 6.3 × 4.7 cm |
+| `print_sleeve_33_4.4cm_300dpi.png` | 6.7 × 4.4 cm |
 
 The map source is only 1448 px wide, so at 58 cm it is enlarged (fine text slightly
 soft). Use a higher-resolution or vector original when one exists.
@@ -61,6 +61,7 @@ button.
 
 - The Canva link (or `production/GIK_hoodie_tech_pack.pdf`)
 - The three `production/print_*_300dpi.png` files
-- `production/ComicNeue-Bold.woff` + licence (if they re-typeset text)
+- `production/Fredoka-Bold.woff` + licence (if they re-typeset text)
+- For the front text and "33": the look is **engraved** (debossed ~1.4 mm with ink fill); confirm the maker can deboss fleece, otherwise flat screen print
 - Ask for a **fabric lab-dip and an ink strike-off** before production. Hex colours
   are screen colours.

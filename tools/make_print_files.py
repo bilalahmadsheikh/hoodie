@@ -66,7 +66,7 @@ def front_print():
     target_w = px(B.FRONT_TEXT_W)
     probe = ImageFont.truetype(str(B.FRONT_FONT), 400)
     size = int(400 * target_w / probe.getlength(B.FRONT_LINES[0]))
-    mask = text_block(B.FRONT_LINES, [size, int(size * 0.92)], 1.12)
+    mask = text_block(B.FRONT_LINES, [size, int(size * 0.92)], 1.12, stroke=round(size * B.FRONT_BOLD))
     w_m, h_m = mask.width / DPI * 0.0254, mask.height / DPI * 0.0254
     return save(to_rgba(mask, B.FRONT_INK_HEX), "print_front_text_30cm_300dpi.png"), w_m, h_m
 

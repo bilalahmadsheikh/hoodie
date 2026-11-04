@@ -21,8 +21,8 @@ of swapping artwork and changing a few settings.
 | | |
 |---|---|
 | Fabric | Cream beige fleece `#F2DCC0`, rib `#ECD5B8`, self-colour cords, gunmetal aglets |
-| Front | "Chai Phir Uzair kay kamray ma... !" / "01/06/27", Comic Neue Bold, ink `#43220A`, 29.8 × 4.1 cm |
-| Right sleeve (wearer's) | "33", bold Comic Neue, ink `#43220A`, 6.3 × 4.7 cm, outer upper arm |
+| Front | "Chai Phir Uzair kay kamray ma... !" / "01/06/27", Fredoka Bold, engraved look, ink `#43220A`, 29.8 × 4.1 cm |
+| Right sleeve (wearer's) | "33", Fredoka Bold, engraved look, ink `#43220A`, 6.7 × 4.4 cm, outer upper arm |
 | Back | "13 14 Guide to the GIK Institute" map, ink `#4E2E14`, 58 × 47.5 cm |
 | 3D viewer | https://claude.ai/artifact/3hkLLwRwZE3gaSFJWwWvRm |
 | Canva tech pack | https://www.canva.com/d/xtTl-yeRoKJjowQ (owner's account) |

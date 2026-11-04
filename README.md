@@ -18,8 +18,8 @@ plus everything needed to manufacture it, and a reusable pipeline for the next o
 | Fabric | Brushed cotton fleece, cream beige `#F2DCC0`; rib hem & cuffs `#ECD5B8` |
 | Trims | Self-colour draw-cords `#E8D1B4`, gunmetal aglets, embroidered eyelets, tonal topstitching |
 | Fit | Oversized, drop shoulder, kangaroo pocket, 2-panel hood with crossover V |
-| Front print | "Chai Phir Uzair kay kamray ma... !" / "01/06/27", Comic Neue Bold, ink `#43220A`, 29.8 × 4.1 cm, under the cord tips |
-| Sleeve print | "33", bold Comic Neue, ink `#43220A`, 6.3 × 4.7 cm, **wearer's right** outer upper arm |
+| Front print | "Chai Phir Uzair kay kamray ma... !" / "01/06/27", Fredoka Bold, **engraved** (letters pressed into the fleece) with dark brown ink `#43220A`, 29.8 × 4.1 cm, under the cord tips |
+| Sleeve print | "33", Fredoka Bold, **engraved**, ink `#43220A`, 6.7 × 4.4 cm, **wearer's right** outer upper arm |
 | Back print | "13 14 Guide to the GIK Institute" campus map, ink `#4E2E14`, 58 × 47.5 cm, under the hood |
 
 ## Quick start
@@ -54,7 +54,7 @@ QUICK=1 python build_hoodie.py
 | `production/GIK_hoodie_tech_pack.pdf` | 6-page tech pack (specs, colours, placements, construction) |
 | `viewer/index.html` | three.js 3D viewer with camera presets |
 | `renders/` | Every view, plus comparison sheets against the mock-ups |
-| `artwork/` | Source artwork, mock-up references, font (Comic Neue, SIL OFL) |
+| `artwork/` | Source artwork, mock-up references, font (Fredoka Bold, SIL OFL) |
 | `tools/` | Render, print export, tech-pack PDF, viewer packaging, `build_all.sh` |
 | `docs/` | Full write-up of the process, how to change things, lessons learned |
 | `original_kit/` | The basic kit this started from |
