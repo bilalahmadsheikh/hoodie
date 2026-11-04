@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Oatmeal Hoodie 3D</title>
+<title>GIK Map Hoodie</title>
 <style>
   :root { --bg:#f3f1ee; --ink:#3d3530; --muted:#7a6f66; --chip:#ffffffcc; --line:#d9d2ca; }
   @media (prefers-color-scheme: dark) {
@@ -30,15 +30,16 @@
 <body>
 <canvas id="c"></canvas>
 <header>
-  <h1>Pullover Hoodie</h1>
-  <p><span class="swatch"></span>Oatmeal / warm taupe · #CCB8A6 · drag to rotate, scroll to zoom</p>
+  <h1>13 14 Guide to the GIK Institute — Hoodie</h1>
+  <p><span class="swatch"></span>Oatmeal / warm taupe · back map print · drag to rotate, pinch or scroll to zoom</p>
 </header>
 <div id="status">Loading model…</div>
 <nav>
-  <button data-view="front" aria-pressed="true">Front</button>
+  <button data-view="front">Front</button>
   <button data-view="three">3/4</button>
   <button data-view="side">Side</button>
   <button data-view="back">Back</button>
+  <button data-view="print">Back print</button>
   <button data-view="detail">Pocket</button>
   <button id="spin">Spin</button>
 </nav>
@@ -54,13 +55,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const MODEL_URL = (new URLSearchParams(location.search).get('model')) || 'oatmeal_hoodie_realistic.glb';
+const MODEL_CANDIDATES = [new URLSearchParams(location.search).get('model'),
+  'oatmeal_hoodie_realistic.glb', '../model/oatmeal_hoodie_realistic.glb'].filter(Boolean);
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
-renderer.toneMappingExposure = 1.78;
+renderer.toneMappingExposure = 0.58;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
 
@@ -83,8 +85,8 @@ Object.assign(key.shadow.camera, { left:-0.9, right:0.9, top:1.3, bottom:-0.3, n
 scene.add(key);
 const fill = new THREE.DirectionalLight(0xf3f4ff, 0.75); fill.position.set(-2, 0.8, 1.6); scene.add(fill);
 const front = new THREE.DirectionalLight(0xffffff, 0.45); front.position.set(0, 0.6, 3); scene.add(front);
-const rim = new THREE.DirectionalLight(0xffffff, 0.9); rim.position.set(-0.6, 1.5, -2.2); scene.add(rim);
-const back = new THREE.DirectionalLight(0xfff8f0, 1.1); back.position.set(1.2, 1.0, -2.0); scene.add(back);
+const rim = new THREE.DirectionalLight(0xffffff, 1.5); rim.position.set(-0.6, 1.5, -2.2); scene.add(rim);
+const back = new THREE.DirectionalLight(0xfff8f0, 2.0); back.position.set(0.9, 1.6, -2.1); scene.add(back);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cfc6, 0.25));
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity: 0.13 }));
@@ -102,6 +104,7 @@ const VIEWS = {
   side:   { pos:[2.75, 0.55, 0.02], target:[0, 0.48, 0] },
   back:   { pos:[0, 0.6, -2.75], target:[0, 0.48, 0] },
   detail: { pos:[0.45, 0.42, 0.95], target:[0.02, 0.28, 0.1] },
+  print:  { pos:[0.12, 0.47, -1.45], target:[0, 0.45, 0] },
 };
 function setView(name) {
   const v = VIEWS[name]; if (!v) return;
@@ -121,13 +124,34 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 const params = new URLSearchParams(location.search);
-setView(params.get('view') || 'front');
+setView(params.get('view') || 'back');
 
-new GLTFLoader().load(MODEL_URL, (gltf) => {
+const loader = new GLTFLoader();
+function loadModel(i) {
+  if (i >= MODEL_CANDIDATES.length) { document.getElementById('status').textContent = 'Could not load the 3D model.'; return; }
+  const url = MODEL_CANDIDATES[i];
+  if (url.endsWith('.gz.b64.txt')) {
+    // hosts that cannot serve .glb: gzip + base64 text, unpacked here
+    fetch(url).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then((t) => {
+        const bin = atob(t.trim()); const bytes = new Uint8Array(bin.length);
+        for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+        return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      })
+      .then((buf) => loader.parse(buf, '', onModel, () => loadModel(i + 1)))
+      .catch(() => loadModel(i + 1));
+    return;
+  }
+  loader.load(url, onModel, (e) => {
+    if (e.total) document.getElementById('status').textContent = 'Loading model… ' + Math.round(100 * e.loaded / e.total) + '%';
+  }, () => loadModel(i + 1));
+}
+function onModel(gltf) {
   gltf.scene.traverse((o) => {
     if (o.isMesh) {
-      o.castShadow = true; o.receiveShadow = true;
       const m = o.material;
+      o.castShadow = !m.transparent; o.receiveShadow = true;
+      if (m.transparent) { m.depthWrite = false; o.renderOrder = 1; }
       if (m.normalMap) m.normalMap.anisotropy = 8;
       if (m.map) m.map.anisotropy = 8;
     }
@@ -135,7 +159,8 @@ new GLTFLoader().load(MODEL_URL, (gltf) => {
   scene.add(gltf.scene);
   document.getElementById('status').remove();
   window.__ready = true;
-}, undefined, (err) => { document.getElementById('status').textContent = 'Could not load model: ' + err.message; });
+}
+loadModel(0);
 
 renderer.setAnimationLoop(() => {
   if (spin) {

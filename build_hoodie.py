@@ -48,6 +48,18 @@ RIB_HEX = "#C7B3A2"      # rib knit reads a touch deeper
 THREAD_HEX = "#9C8A79"   # tonal stitching thread
 CORD_HEX = "#C3B19F"     # self-colour draw-cord
 AGLET_HEX = "#8E8A86"    # brushed gunmetal tips
+INK_HEX = "#4E2E14"      # dark sepia-brown screen-print ink (as on the mock-up)
+
+# Back print: "13 14 Guide to the GIK Institute" map artwork, screen printed on the
+# back panel. Placement follows the mock-up: centred, just under the hood, ~56 cm wide.
+ART_DIR = OUT / "artwork"
+PRINT_SRC = ART_DIR / "gik_map_artwork.webp"
+PRINT_PNG = ART_DIR / "gik_map_back_print.png"
+PRINT_CROP = (16, 30, 1430, 1038)   # inside the decorative border of the artwork
+PRINT_W = 0.58
+PRINT_TOP = 0.662
+PRINT_STRETCH = 1.15                # mock-up layout is taller than the flat art
+EXTRA_UV1 = {}                      # part name -> second UV set (fabric tiling)
 
 
 def srgb_to_linear(hexcode):
@@ -401,7 +413,7 @@ def build_shell(voxel=None):
     print("volume", vol.shape)
     verts, faces, _, _ = marching_cubes(vol, 0.0, spacing=(voxel, voxel, voxel))
     verts += lo
-    mesh = trimesh.Trimesh(verts, faces[:, ::-1], process=True)
+    mesh = trimesh.Trimesh(verts, faces, process=True)
     print("marching cubes:", len(mesh.vertices), "verts", len(mesh.faces), "faces")
     # keep the main connected piece (drops tiny floaters)
     parts = mesh.split(only_watertight=False)
@@ -822,18 +834,21 @@ def write_glb(parts, path):
         return len(accessors) - 1
 
     samplers.append(G.Sampler(magFilter=9729, minFilter=9987, wrapS=10497, wrapT=10497))
+    samplers.append(G.Sampler(magFilter=9729, minFilter=9987, wrapS=33071, wrapT=33071))
 
-    def add_tex(file):
+    def add_tex(file, sampler=0):
         data = Path(file).read_bytes()
         bv = add_view(data)
-        images.append(G.Image(bufferView=bv, mimeType="image/jpeg", name=Path(file).stem))
-        textures.append(G.Texture(sampler=0, source=len(images) - 1))
+        mime = "image/png" if str(file).endswith(".png") else "image/jpeg"
+        images.append(G.Image(bufferView=bv, mimeType=mime, name=Path(file).stem))
+        textures.append(G.Texture(sampler=sampler, source=len(images) - 1))
         return len(textures) - 1
 
     t_jn = add_tex(TEX_DIR / "fleece_jersey_normal.jpg")
     t_rn = add_tex(TEX_DIR / "rib_knit_normal.jpg")
     t_jc = add_tex(TEX_DIR / "fabric_grain_color.jpg")
     t_rc = add_tex(TEX_DIR / "rib_grain_color.jpg")
+    t_pr = add_tex(PRINT_PNG, sampler=1)
 
     def fabric(name, hexcode, color_tex, normal_tex, nscale, rough, sheen=1.0):
         c = srgb_to_linear(hexcode)
@@ -856,6 +871,13 @@ def write_glb(parts, path):
         fabric("Drawcord", CORD_HEX, t_jc, t_jn, 0.8, 0.9, sheen=0.5),
         G.Material(name="Aglet_Gunmetal", pbrMetallicRoughness=G.PbrMetallicRoughness(
             baseColorFactor=[*srgb_to_linear(AGLET_HEX).tolist(), 1.0], metallicFactor=1.0, roughnessFactor=0.32)),
+        # water-based screen-print ink: sits in the fleece, keeps the knit texture
+        G.Material(name="Back_Print_Ink", alphaMode="BLEND", doubleSided=False,
+                   pbrMetallicRoughness=G.PbrMetallicRoughness(
+                       baseColorFactor=[1.0, 1.0, 1.0, 1.0], baseColorTexture=G.TextureInfo(index=t_pr),
+                       metallicFactor=0.0, roughnessFactor=0.88),
+                   normalTexture=G.NormalMaterialTexture(index=t_jn, texCoord=1, scale=0.55),
+                   extensions={"KHR_materials_sheen": {"sheenColorFactor": [0.12, 0.09, 0.07], "sheenRoughnessFactor": 0.6}}),
     ]
     mat_index = {m.name: i for i, m in enumerate(materials)}
 
@@ -866,6 +888,8 @@ def write_glb(parts, path):
         )
         if UV is not None:
             attrs.TEXCOORD_0 = add_acc(UV.astype(np.float32), 5126, "VEC2", 34962)
+        if name in EXTRA_UV1:
+            attrs.TEXCOORD_1 = add_acc(EXTRA_UV1[name].astype(np.float32), 5126, "VEC2", 34962)
         if C is not None:
             c4 = np.concatenate([C, np.ones((len(C), 1))], 1)
             attrs.COLOR_0 = add_acc(np.clip(np.round(c4 * 65535), 0, 65535).astype(np.uint16), 5123, "VEC4", 34962, normalized=True)
@@ -889,8 +913,49 @@ def write_glb(parts, path):
 # --------------------------------------------------------------------------
 # main
 # --------------------------------------------------------------------------
+def make_print_texture(width=2048):
+    """Turn the parchment artwork into ink-only RGBA (paper becomes transparent)."""
+    im = Image.open(PRINT_SRC).convert("RGB").crop(PRINT_CROP)
+    h = round(width * im.height / im.width)
+    im = im.resize((width, h), Image.LANCZOS)
+    a = np.asarray(im).astype(float)
+    L = a @ np.array([0.30, 0.59, 0.11])
+    bg = np.median(L)                      # parchment
+    ink = np.percentile(L, 0.5)
+    raw = (bg - L) / (bg - ink)
+    alpha = smoothstep(0.12, 0.72, raw) * 0.96
+    rgba = np.zeros((h, width, 4), np.uint8)
+    rgba[..., :3] = [int(INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
+    rgba[..., 3] = np.round(alpha * 255)
+    rgba[:4, :, 3] = rgba[-4:, :, 3] = 0
+    rgba[:, :4, 3] = rgba[:, -4:, 3] = 0
+    Image.fromarray(rgba, "RGBA").save(PRINT_PNG, optimize=True)
+    return width / h
+
+
+def build_back_print(shell, lab, N, colors, aspect):
+    """Decal mesh: back-panel faces under the print, lifted 0.8 mm, planar UVs."""
+    ph = PRINT_W / aspect * PRINT_STRETCH
+    y0 = PRINT_TOP - ph
+    V = np.asarray(shell.vertices)
+    uv = np.stack([0.5 - V[:, 0] / PRINT_W, 1.0 - (V[:, 1] - y0) / ph], 1)
+    fidx = np.where(lab == "Back_Body")[0]
+    F = np.asarray(shell.faces)[fidx]
+    fu = uv[F]
+    inside = (fu.max(1) > -0.005).all(1) & (fu.min(1) < 1.005).all(1)
+    keep = inside & (np.asarray(shell.face_normals)[fidx, 2] < -0.15)
+    F = F[keep]
+    uniq, inv = np.unique(F.ravel(), return_inverse=True)
+    n = N[uniq]
+    Vd = V[uniq] + n * 0.0008
+    uv1 = np.stack([-V[uniq, 0], V[uniq, 1]], 1) / TILE_M
+    print(f"  Back_Print       {len(F):7d} faces  ({PRINT_W * 100:.0f} x {ph * 100:.0f} cm)")
+    return Vd, n, colors[uniq], uv[uniq], inv.reshape(-1, 3), uv1
+
+
 def main():
     make_textures()
+    aspect = make_print_texture()
     shell = build_shell()
 
     V = np.asarray(shell.vertices)
@@ -953,6 +1018,10 @@ def main():
         parts[name] = (Vx, Nx, Cx, UVx, Fx, mat)
         print(f"  {name:16s} {len(Fx):7d} faces")
 
+    Vp, Np_, Cp, UVp, Fp, UV1p = build_back_print(shell, lab, N, colors, aspect)
+    parts["Back_Print"] = (Vp, Np_, Cp, UVp, Fp, "Back_Print_Ink")
+    EXTRA_UV1["Back_Print"] = UV1p
+
     print("stitching ...")
     st = build_stitching()
 
@@ -981,6 +1050,7 @@ def main():
     with zipfile.ZipFile(MODEL_DIR / "oatmeal_hoodie_realistic_obj.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for f in (obj, obj.with_suffix(".mtl"), *sorted(TEX_DIR.glob("*.jpg"))):
             z.write(f, f.relative_to(MODEL_DIR))
+        z.write(PRINT_PNG, "textures/" + PRINT_PNG.name)
     obj.unlink()
     obj.with_suffix(".mtl").unlink()
 
@@ -1027,6 +1097,7 @@ def write_obj(parts, path):
         "Stitch_Thread": (THREAD_HEX, None, None),
         "Drawcord": (CORD_HEX, "fabric_grain_color.jpg", "fleece_jersey_normal.jpg"),
         "Aglet_Gunmetal": (AGLET_HEX, None, None),
+        "Back_Print_Ink": (INK_HEX, "gik_map_back_print.png", None),
     }
     out = []
     for m, (hx, kd, nm) in defs.items():
@@ -1034,6 +1105,8 @@ def write_obj(parts, path):
         out += [f"newmtl {m}", f"Kd {c[0]:.4f} {c[1]:.4f} {c[2]:.4f}", "Ks 0.03 0.03 0.03", "Ns 8"]
         if kd:
             out.append(f"map_Kd textures/{kd}")
+            if kd.endswith(".png"):
+                out.append(f"map_d textures/{kd}")
         if nm:
             out.append(f"norm textures/{nm}")
         out.append("")

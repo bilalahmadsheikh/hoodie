@@ -1,6 +1,20 @@
-# Realistic Oatmeal / Warm-Taupe Hoodie (3D)
+# Realistic Oatmeal / Warm-Taupe Hoodie (3D) — GIK map back print
+
+![back print](renders/back_print_comparison.png)
 
 ![comparison](renders/comparison_sheet.png)
+
+## Back print
+
+The back carries the **"13 14 Guide to the GIK Institute"** map (`artwork/gik_map_artwork.webp`),
+placed like the mock-up (`artwork/back_print_mockup_reference.webp`): centred under the hood,
+58 cm wide, running down to just above the rib hem.
+
+- The parchment background is removed, so only the sepia-brown ink (`#4E2E14`) is printed and
+  the fleece shows through, like a real screen print (`artwork/gik_map_back_print.png`).
+- It is its own object, `Back_Print`, a thin decal that follows the folds of the back panel
+  (0.8 mm above it). Its material, `Back_Print_Ink`, keeps the fleece knit texture. To swap
+  the artwork, replace the PNG (or `PRINT_SRC` in `build_hoodie.py`) and rebuild.
 
 A rebuilt, more realistic version of the *Oatmeal Taupe Hoodie 3D Editable Kit* (the original is kept in `original_kit/`).
 The proportions and colour were matched to the reference product photo.
@@ -12,7 +26,7 @@ The proportions and colour were matched to the reference product photo.
 | `model/oatmeal_hoodie_realistic.glb` | **Main model** (glTF 2.0, PBR + fleece sheen, textures embedded) |
 | `model/oatmeal_hoodie_realistic_obj.zip` | OBJ + MTL + textures, for tools without glTF |
 | `model/textures/` | Tiling jersey-fleece / rib-knit normal maps and grain colour maps |
-| `viewer/index.html` | three.js studio viewer (put the `.glb` next to it, serve over http) |
+| `viewer/index.html` | three.js studio viewer (finds `../model/*.glb` automatically; serve over http) |
 | `renders/` | Front, 3/4, side, back and pocket close-up renders |
 | `build_hoodie.py` | Generator: run it to rebuild everything |
 | `tools/render.js` | Headless render script (Playwright) |
@@ -53,4 +67,4 @@ python build_hoodie.py
 ```
 
 `QUICK=1 python build_hoodie.py` does a fast low-resolution preview build.
-The model is about 337k triangles. It is a static garment, not rigged or set up for cloth simulation.
+The model is about 357k triangles. It is a static garment, not rigged or set up for cloth simulation.
