@@ -1,4 +1,4 @@
-# Realistic Oatmeal / Warm-Taupe Hoodie (3D) — GIK prints
+# Realistic Cream-Beige Hoodie (3D) — GIK prints
 
 **Live 3D viewer:** https://claude.ai/artifact/3hkLLwRwZE3gaSFJWwWvRm
 
@@ -19,6 +19,13 @@ To change the wording, size or position, edit `FRONT_LINES`, `FRONT_TEXT_W` and
 `FRONT_TEXT_CY` in `build_hoodie.py` and rebuild.
 
 ![comparison](renders/comparison_sheet.png)
+
+## Sleeve print
+
+A small **33** (3.4 cm tall digits, same font and ink as the front) on the outer forearm of the
+right sleeve, the one on the right in the front view (x > 0). It is the `Sleeve_Print` object.
+`SLEEVE_SIDE = -1` in `build_hoodie.py` moves it to the other sleeve; `SLEEVE_TEXT` and
+`SLEEVE_TEXT_H` change the text and size.
 
 ## Back print
 
@@ -59,7 +66,7 @@ The proportions and colour were matched to the reference product photo.
 | Solid stitch tubes | Dashed tonal topstitching on the pocket, hem, cuffs, armholes, shoulders, side seams and hood |
 | Thin cords | Draw-cords that hang over the chest, with gunmetal aglets and eyelets |
 
-**Colour:** fabric albedo `#CCB8A6` (rib `#C7B3A2`). Under the studio lighting it renders at RGB ≈ 199/180/165, against ≈ 201/183/168 for the lit fabric in the reference photo.
+**Colour:** creamy beige, fabric albedo `#F2DCC0` (rib `#ECD5B8`). Under the studio lighting it renders at RGB ≈ 234/211/184, against ≈ 239/215/184 for the fabric in the print mock-ups.
 
 ## Editing in Blender
 

@@ -1,7 +1,7 @@
 {
   "model": "Pullover hoodie \u2014 oatmeal / warm taupe (realistic)",
-  "fabric_color_hex": "#CCB8A6",
-  "rib_color_hex": "#C7B3A2",
+  "fabric_color_hex": "#F2DCC0",
+  "rib_color_hex": "#ECD5B8",
   "units": "metres, Y up, +Z front",
   "texture_tile": "5 cm per UV unit (textures repeat)",
   "parts": {
@@ -16,10 +16,11 @@
     "Rib_Cuff_Left": 3855,
     "Back_Print": 25386,
     "Front_Print": 1410,
+    "Sleeve_Print": 278,
     "Topstitching": 96600,
     "Drawcords": 8960,
     "Drawcord_Eyelets": 936,
     "Aglets": 1120
   },
-  "total_triangles": 364412
+  "total_triangles": 364690
 }

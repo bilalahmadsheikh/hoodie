@@ -43,10 +43,10 @@ RNG = np.random.default_rng(7)
 # Colour — sampled from the reference photo (lit fabric ~#CDBBAC, shadow
 # ~#A69485). This is the albedo that reproduces it under neutral studio light.
 # --------------------------------------------------------------------------
-FABRIC_HEX = "#CCB8A6"   # oatmeal / warm taupe (slightly rosy-grey beige)
-RIB_HEX = "#C7B3A2"      # rib knit reads a touch deeper
-THREAD_HEX = "#A39180"   # tonal stitching thread
-CORD_HEX = "#C3B19F"     # self-colour draw-cord
+FABRIC_HEX = "#F2DCC0"   # creamy beige, matched to the print mock-ups
+RIB_HEX = "#ECD5B8"      # rib knit reads a touch deeper
+THREAD_HEX = "#CDB496"   # tonal stitching thread
+CORD_HEX = "#E8D1B4"     # self-colour draw-cord
 AGLET_HEX = "#8E8A86"    # brushed gunmetal tips
 INK_HEX = "#4E2E14"      # dark sepia-brown screen-print ink (as on the mock-up)
 
@@ -68,6 +68,15 @@ FRONT_PNG = ART_DIR / "front_text_print.png"
 FRONT_INK_HEX = "#43220A"           # dark chocolate brown, sampled from the mock-up
 FRONT_TEXT_W = 0.30                 # metres across the first line
 FRONT_TEXT_CY = 0.418               # centre height of the two-line block
+
+# Sleeve print: a small "33" on the outer forearm of the right sleeve (the one on
+# the right in the front view, x > 0), same font and ink as the front.
+SLEEVE_TEXT = "33"
+SLEEVE_PNG = ART_DIR / "sleeve_33_print.png"
+SLEEVE_TEXT_H = 0.034               # cap height of the digits, metres
+SLEEVE_SIDE = 1                     # +1: right sleeve in the front view; -1: the other one
+SLEEVE_ANCHOR = np.array([0.404, 0.222, 0.014])   # point on the sleeve centre-line
+SLEEVE_FACING = np.array([0.55, 0.0, 0.84])       # print faces front-and-outwards
 
 
 def srgb_to_linear(hexcode):
@@ -859,6 +868,7 @@ def write_glb(parts, path):
     t_rc = add_tex(TEX_DIR / "rib_grain_color.jpg")
     t_pr = add_tex(PRINT_PNG, sampler=1)
     t_fp = add_tex(FRONT_PNG, sampler=1)
+    t_sp = add_tex(SLEEVE_PNG, sampler=1)
 
     def fabric(name, hexcode, color_tex, normal_tex, nscale, rough, sheen=1.0):
         c = srgb_to_linear(hexcode)
@@ -892,6 +902,7 @@ def write_glb(parts, path):
         # water-based screen-print ink: sits in the fleece, keeps the knit texture
         ink("Back_Print_Ink", t_pr),
         ink("Front_Print_Ink", t_fp),
+        ink("Sleeve_Print_Ink", t_sp),
     ]
     mat_index = {m.name: i for i, m in enumerate(materials)}
 
@@ -991,6 +1002,54 @@ def build_print_decal(shell, lab, N, colors, piece, width, height, y_top, facing
     return Vd, n, colors[uniq], uv[uniq], inv.reshape(-1, 3), uv1
 
 
+def make_sleeve_text_texture(size=320, pad=24):
+    """Render the sleeve number as ink-only RGBA; returns (aspect, cap height fraction)."""
+    from PIL import ImageDraw, ImageFont
+    font = ImageFont.truetype(str(FRONT_FONT), size)
+    l, t, r, b = font.getbbox(SLEEVE_TEXT)
+    w, h = (r - l) + 2 * pad, (b - t) + 2 * pad
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).text((pad - l, pad - t), SLEEVE_TEXT, font=font, fill=255)
+    rgba = np.zeros((h, w, 4), np.uint8)
+    rgba[..., :3] = [int(FRONT_INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
+    rgba[..., 3] = np.asarray(mask)
+    Image.fromarray(rgba, "RGBA").save(SLEEVE_PNG, optimize=True)
+    return w / h, (b - t) / h
+
+
+def build_sleeve_print(shell, lab, N, colors, aspect, cap_frac):
+    """Decal on the sleeve, projected along the local surface normal, text kept upright."""
+    side = SLEEVE_SIDE
+    piece = "Sleeve_Right" if side > 0 else "Sleeve_Left"
+    flip = np.array([side, 1.0, 1.0])
+    anchor = SLEEVE_ANCHOR * flip
+    facing = SLEEVE_FACING * flip
+    facing = facing / np.linalg.norm(facing)
+    c = project_to_surface((anchor + facing * 0.09)[None], iters=10)[0]
+    n = garment_grad(c[None])[0]
+    up = np.array([0.0, 1.0, 0.0]) - n * n[1]
+    up /= np.linalg.norm(up)
+    right = np.cross(up, n)
+    h = SLEEVE_TEXT_H / cap_frac
+    w = h * aspect
+    V = np.asarray(shell.vertices)
+    rel = V - c
+    uv = np.stack([0.5 + (rel @ right) / w, 0.5 - (rel @ up) / h], 1)
+    near = np.abs(rel @ n) < 0.04
+    fidx = np.where(lab == piece)[0]
+    F = np.asarray(shell.faces)[fidx]
+    fu = uv[F]
+    inside = (fu.max(1) > -0.02).all(1) & (fu.min(1) < 1.02).all(1) & near[F].all(1)
+    keep = inside & (np.asarray(shell.face_normals)[fidx] @ n > 0.3)
+    F = F[keep]
+    uniq, inv = np.unique(F.ravel(), return_inverse=True)
+    nn = N[uniq]
+    Vd = V[uniq] + nn * 0.0008
+    uv1 = np.stack([rel[uniq] @ right, rel[uniq] @ up], 1) / TILE_M
+    print(f"  {'Sleeve_Print':16s} {len(F):7d} faces  ({w * 100:.1f} x {h * 100:.1f} cm)")
+    return Vd, nn, colors[uniq], uv[uniq], inv.reshape(-1, 3), uv1
+
+
 def build_back_print(shell, lab, N, colors, aspect):
     ph = PRINT_W / aspect * PRINT_STRETCH
     return build_print_decal(shell, lab, N, colors, "Back_Body", PRINT_W, ph, PRINT_TOP, -1, "Back_Print")
@@ -1006,6 +1065,7 @@ def main():
     make_textures()
     aspect = make_print_texture()
     f_aspect, f_frac = make_front_text_texture()
+    s_aspect, s_cap = make_sleeve_text_texture()
     shell = build_shell()
 
     V = np.asarray(shell.vertices)
@@ -1074,6 +1134,9 @@ def main():
     Vp, Np_, Cp, UVp, Fp, UV1p = build_front_print(shell, lab, N, colors, f_aspect, f_frac)
     parts["Front_Print"] = (Vp, Np_, Cp, UVp, Fp, "Front_Print_Ink")
     EXTRA_UV1["Front_Print"] = UV1p
+    Vp, Np_, Cp, UVp, Fp, UV1p = build_sleeve_print(shell, lab, N, colors, s_aspect, s_cap)
+    parts["Sleeve_Print"] = (Vp, Np_, Cp, UVp, Fp, "Sleeve_Print_Ink")
+    EXTRA_UV1["Sleeve_Print"] = UV1p
 
     print("stitching ...")
     st = build_stitching()
@@ -1105,6 +1168,7 @@ def main():
             z.write(f, f.relative_to(MODEL_DIR))
         z.write(PRINT_PNG, "textures/" + PRINT_PNG.name)
         z.write(FRONT_PNG, "textures/" + FRONT_PNG.name)
+        z.write(SLEEVE_PNG, "textures/" + SLEEVE_PNG.name)
     obj.unlink()
     obj.with_suffix(".mtl").unlink()
 
@@ -1153,6 +1217,7 @@ def write_obj(parts, path):
         "Aglet_Gunmetal": (AGLET_HEX, None, None),
         "Back_Print_Ink": (INK_HEX, "gik_map_back_print.png", None),
         "Front_Print_Ink": (FRONT_INK_HEX, "front_text_print.png", None),
+        "Sleeve_Print_Ink": (FRONT_INK_HEX, "sleeve_33_print.png", None),
     }
     out = []
     for m, (hx, kd, nm) in defs.items():
