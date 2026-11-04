@@ -18,6 +18,15 @@ Writes to `production/` (transparent PNG, 300 DPI, actual print size; sizes also
 The map source is only 1448 px wide, so at 58 cm it is enlarged (fine text slightly
 soft). Use a higher-resolution or vector original when one exists.
 
+## Production package (one zip for the maker)
+
+```bash
+python tools/make_package.py
+```
+
+Writes `dist/GIK_hoodie_production_package.zip`: a maker README, the tech-pack PDF,
+the three print files, the font + licence, reference renders, and the 3D model.
+
 ## Tech-pack PDF
 
 `production/tech_pack.html` is a 6-page A4-landscape document: cover, garment
