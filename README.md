@@ -22,10 +22,11 @@ To change the wording, size or position, edit `FRONT_LINES`, `FRONT_TEXT_W` and
 
 ## Sleeve print
 
-A small **33** (3.4 cm tall digits, same font and ink as the front) on the outer forearm of the
-right sleeve, the one on the right in the front view (x > 0). It is the `Sleeve_Print` object.
-`SLEEVE_SIDE = -1` in `build_hoodie.py` moves it to the other sleeve; `SLEEVE_TEXT` and
-`SLEEVE_TEXT_H` change the text and size.
+A small **33** (3.4 cm tall digits, same font and ink as the front) on the outer upper arm,
+at bicep/tricep height, of the wearer's right sleeve (x < 0, the one on the left in the front
+view). It sits just below the drop-shoulder seam. It is the `Sleeve_Print` object.
+`SLEEVE_SIDE = 1` in `build_hoodie.py` moves it to the other sleeve; `SLEEVE_ANCHOR`,
+`SLEEVE_TEXT` and `SLEEVE_TEXT_H` change its position, text and size.
 
 ## Back print
 

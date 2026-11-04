@@ -69,14 +69,14 @@ FRONT_INK_HEX = "#43220A"           # dark chocolate brown, sampled from the moc
 FRONT_TEXT_W = 0.30                 # metres across the first line
 FRONT_TEXT_CY = 0.418               # centre height of the two-line block
 
-# Sleeve print: a small "33" on the outer forearm of the right sleeve (the one on
-# the right in the front view, x > 0), same font and ink as the front.
+# Sleeve print: a small "33" on the outer upper arm (bicep/tricep height) of the
+# wearer's right sleeve (x < 0, the one on the left in the front view).
 SLEEVE_TEXT = "33"
 SLEEVE_PNG = ART_DIR / "sleeve_33_print.png"
 SLEEVE_TEXT_H = 0.034               # cap height of the digits, metres
-SLEEVE_SIDE = 1                     # +1: right sleeve in the front view; -1: the other one
-SLEEVE_ANCHOR = np.array([0.404, 0.222, 0.014])   # point on the sleeve centre-line
-SLEEVE_FACING = np.array([0.55, 0.0, 0.84])       # print faces front-and-outwards
+SLEEVE_SIDE = -1                    # -1: wearer's right sleeve; +1: wearer's left
+SLEEVE_ANCHOR = np.array([0.336, 0.448, 0.000])  # upper-arm point on the sleeve centre-line
+SLEEVE_FACING = np.array([0.92, 0.0, 0.38])       # outer side of the arm, turned slightly forward
 
 
 def srgb_to_linear(hexcode):
