@@ -31,7 +31,7 @@
 <canvas id="c"></canvas>
 <header>
   <h1>13 14 Guide to the GIK Institute — Hoodie</h1>
-  <p><span class="swatch"></span>Oatmeal / warm taupe · back map print · drag to rotate, pinch or scroll to zoom</p>
+  <p><span class="swatch"></span>Oatmeal / warm taupe · front &amp; back prints · drag to rotate, pinch or scroll to zoom</p>
 </header>
 <div id="status">Loading model…</div>
 <nav>
@@ -39,6 +39,7 @@
   <button data-view="three">3/4</button>
   <button data-view="side">Side</button>
   <button data-view="back">Back</button>
+  <button data-view="chest">Front print</button>
   <button data-view="print">Back print</button>
   <button data-view="detail">Pocket</button>
   <button id="spin">Spin</button>
@@ -105,6 +106,7 @@ const VIEWS = {
   back:   { pos:[0, 0.6, -2.75], target:[0, 0.48, 0] },
   detail: { pos:[0.45, 0.42, 0.95], target:[0.02, 0.28, 0.1] },
   print:  { pos:[0.12, 0.47, -1.45], target:[0, 0.45, 0] },
+  chest:  { pos:[0.06, 0.45, 0.85], target:[0, 0.42, 0.05] },
 };
 function setView(name) {
   const v = VIEWS[name]; if (!v) return;

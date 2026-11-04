@@ -1,6 +1,22 @@
-# Realistic Oatmeal / Warm-Taupe Hoodie (3D) — GIK map back print
+# Realistic Oatmeal / Warm-Taupe Hoodie (3D) — GIK prints
+
+**Live 3D viewer:** https://claude.ai/artifact/3hkLLwRwZE3gaSFJWwWvRm
+
+![front print](renders/front_print_comparison.png)
 
 ![back print](renders/back_print_comparison.png)
+
+## Front print
+
+Two centred lines in dark chocolate-brown ink (`#43220A`), set in Comic Neue Bold
+(`artwork/fonts/`, SIL Open Font License), just below the draw-cord tips:
+
+> Chai Phir Uzair kay kamray ma... !
+> 01/06/27
+
+The first line is 30 cm wide. It is the `Front_Print` object (material `Front_Print_Ink`).
+To change the wording, size or position, edit `FRONT_LINES`, `FRONT_TEXT_W` and
+`FRONT_TEXT_CY` in `build_hoodie.py` and rebuild.
 
 ![comparison](renders/comparison_sheet.png)
 

@@ -45,7 +45,7 @@ RNG = np.random.default_rng(7)
 # --------------------------------------------------------------------------
 FABRIC_HEX = "#CCB8A6"   # oatmeal / warm taupe (slightly rosy-grey beige)
 RIB_HEX = "#C7B3A2"      # rib knit reads a touch deeper
-THREAD_HEX = "#9C8A79"   # tonal stitching thread
+THREAD_HEX = "#A39180"   # tonal stitching thread
 CORD_HEX = "#C3B19F"     # self-colour draw-cord
 AGLET_HEX = "#8E8A86"    # brushed gunmetal tips
 INK_HEX = "#4E2E14"      # dark sepia-brown screen-print ink (as on the mock-up)
@@ -60,6 +60,14 @@ PRINT_W = 0.58
 PRINT_TOP = 0.662
 PRINT_STRETCH = 1.15                # mock-up layout is taller than the flat art
 EXTRA_UV1 = {}                      # part name -> second UV set (fabric tiling)
+
+# Front print: two centred lines of rounded handwriting, just below the cord tips.
+FRONT_LINES = ["Chai Phir Uzair kay kamray ma... !", "01/06/27"]
+FRONT_FONT = ART_DIR / "fonts" / "ComicNeue-Bold.woff"   # SIL Open Font License
+FRONT_PNG = ART_DIR / "front_text_print.png"
+FRONT_INK_HEX = "#43220A"           # dark chocolate brown, sampled from the mock-up
+FRONT_TEXT_W = 0.30                 # metres across the first line
+FRONT_TEXT_CY = 0.418               # centre height of the two-line block
 
 
 def srgb_to_linear(hexcode):
@@ -490,7 +498,8 @@ def tube(pts, radius, sides=8, rz=None, closed_ends=True):
         for j in range(sides):
             k = (j + 1) % sides
             F += [[c0, k, j], [c1, last + j, last + k]]
-    return trimesh.Trimesh(V, np.array(F), process=False)
+    # wind faces so normals point outwards
+    return trimesh.Trimesh(V, np.array(F)[:, ::-1], process=False)
 
 
 def stitch_line(guess, offset=0.0004, dash=0.0030, gap=0.0016, r=0.00052):
@@ -849,6 +858,7 @@ def write_glb(parts, path):
     t_jc = add_tex(TEX_DIR / "fabric_grain_color.jpg")
     t_rc = add_tex(TEX_DIR / "rib_grain_color.jpg")
     t_pr = add_tex(PRINT_PNG, sampler=1)
+    t_fp = add_tex(FRONT_PNG, sampler=1)
 
     def fabric(name, hexcode, color_tex, normal_tex, nscale, rough, sheen=1.0):
         c = srgb_to_linear(hexcode)
@@ -864,6 +874,14 @@ def write_glb(parts, path):
             m.normalTexture = G.NormalMaterialTexture(index=normal_tex, scale=nscale)
         return m
 
+    def ink(name, tex):
+        return G.Material(name=name, alphaMode="BLEND", doubleSided=False,
+                          pbrMetallicRoughness=G.PbrMetallicRoughness(
+                              baseColorFactor=[1.0, 1.0, 1.0, 1.0], baseColorTexture=G.TextureInfo(index=tex),
+                              metallicFactor=0.0, roughnessFactor=0.88),
+                          normalTexture=G.NormalMaterialTexture(index=t_jn, texCoord=1, scale=0.55),
+                          extensions={"KHR_materials_sheen": {"sheenColorFactor": [0.12, 0.09, 0.07], "sheenRoughnessFactor": 0.6}})
+
     materials = [
         fabric("Fleece_Oatmeal", FABRIC_HEX, t_jc, t_jn, 0.55, 0.93),
         fabric("Rib_Knit_Oatmeal", RIB_HEX, t_rc, t_rn, 0.9, 0.95),
@@ -872,12 +890,8 @@ def write_glb(parts, path):
         G.Material(name="Aglet_Gunmetal", pbrMetallicRoughness=G.PbrMetallicRoughness(
             baseColorFactor=[*srgb_to_linear(AGLET_HEX).tolist(), 1.0], metallicFactor=1.0, roughnessFactor=0.32)),
         # water-based screen-print ink: sits in the fleece, keeps the knit texture
-        G.Material(name="Back_Print_Ink", alphaMode="BLEND", doubleSided=False,
-                   pbrMetallicRoughness=G.PbrMetallicRoughness(
-                       baseColorFactor=[1.0, 1.0, 1.0, 1.0], baseColorTexture=G.TextureInfo(index=t_pr),
-                       metallicFactor=0.0, roughnessFactor=0.88),
-                   normalTexture=G.NormalMaterialTexture(index=t_jn, texCoord=1, scale=0.55),
-                   extensions={"KHR_materials_sheen": {"sheenColorFactor": [0.12, 0.09, 0.07], "sheenRoughnessFactor": 0.6}}),
+        ink("Back_Print_Ink", t_pr),
+        ink("Front_Print_Ink", t_fp),
     ]
     mat_index = {m.name: i for i, m in enumerate(materials)}
 
@@ -933,29 +947,65 @@ def make_print_texture(width=2048):
     return width / h
 
 
-def build_back_print(shell, lab, N, colors, aspect):
-    """Decal mesh: back-panel faces under the print, lifted 0.8 mm, planar UVs."""
-    ph = PRINT_W / aspect * PRINT_STRETCH
-    y0 = PRINT_TOP - ph
+def make_front_text_texture(width=2400, pad=40):
+    """Render the front slogan as ink-only RGBA; returns the image aspect (w/h)."""
+    from PIL import ImageDraw, ImageFont
+    probe = ImageFont.truetype(str(FRONT_FONT), 200)
+    w0 = probe.getlength(FRONT_LINES[0])
+    size = int(200 * (width - 2 * pad) / w0)
+    sizes = [size, int(size * 0.92)]           # the date is set a touch smaller
+    fonts = [ImageFont.truetype(str(FRONT_FONT), s) for s in sizes]
+    asc, desc = fonts[0].getmetrics()
+    line_gap = int((asc + desc) * 1.12)
+    h = pad * 2 + line_gap + sum(f.getmetrics()[0] + f.getmetrics()[1] for f in fonts[1:])
+    mask = Image.new("L", (width, h), 0)
+    d = ImageDraw.Draw(mask)
+    y = pad
+    for line, f in zip(FRONT_LINES, fonts):
+        d.text((width / 2, y), line, font=f, fill=255, anchor="ma")
+        y += line_gap
+    rgba = np.zeros((h, width, 4), np.uint8)
+    rgba[..., :3] = [int(FRONT_INK_HEX[i:i + 2], 16) for i in (1, 3, 5)]
+    rgba[..., 3] = np.asarray(mask)
+    Image.fromarray(rgba, "RGBA").save(FRONT_PNG, optimize=True)
+    return width / h, (width - 2 * pad) / width
+
+
+def build_print_decal(shell, lab, N, colors, piece, width, height, y_top, facing, name):
+    """Decal mesh over `piece` faces under the print, lifted 0.8 mm, planar UVs.
+    facing=+1 projects from the front, -1 from the back."""
+    y0 = y_top - height
     V = np.asarray(shell.vertices)
-    uv = np.stack([0.5 - V[:, 0] / PRINT_W, 1.0 - (V[:, 1] - y0) / ph], 1)
-    fidx = np.where(lab == "Back_Body")[0]
+    uv = np.stack([0.5 + facing * V[:, 0] / width, 1.0 - (V[:, 1] - y0) / height], 1)
+    fidx = np.where(lab == piece)[0]
     F = np.asarray(shell.faces)[fidx]
     fu = uv[F]
     inside = (fu.max(1) > -0.005).all(1) & (fu.min(1) < 1.005).all(1)
-    keep = inside & (np.asarray(shell.face_normals)[fidx, 2] < -0.15)
+    keep = inside & (facing * np.asarray(shell.face_normals)[fidx, 2] > 0.15)
     F = F[keep]
     uniq, inv = np.unique(F.ravel(), return_inverse=True)
     n = N[uniq]
     Vd = V[uniq] + n * 0.0008
-    uv1 = np.stack([-V[uniq, 0], V[uniq, 1]], 1) / TILE_M
-    print(f"  Back_Print       {len(F):7d} faces  ({PRINT_W * 100:.0f} x {ph * 100:.0f} cm)")
+    uv1 = np.stack([facing * V[uniq, 0], V[uniq, 1]], 1) / TILE_M
+    print(f"  {name:16s} {len(F):7d} faces  ({width * 100:.0f} x {height * 100:.0f} cm)")
     return Vd, n, colors[uniq], uv[uniq], inv.reshape(-1, 3), uv1
+
+
+def build_back_print(shell, lab, N, colors, aspect):
+    ph = PRINT_W / aspect * PRINT_STRETCH
+    return build_print_decal(shell, lab, N, colors, "Back_Body", PRINT_W, ph, PRINT_TOP, -1, "Back_Print")
+
+
+def build_front_print(shell, lab, N, colors, aspect, line_frac):
+    w = FRONT_TEXT_W / line_frac          # texture width incl. padding
+    h = w / aspect
+    return build_print_decal(shell, lab, N, colors, "Front_Body", w, h, FRONT_TEXT_CY + h / 2, +1, "Front_Print")
 
 
 def main():
     make_textures()
     aspect = make_print_texture()
+    f_aspect, f_frac = make_front_text_texture()
     shell = build_shell()
 
     V = np.asarray(shell.vertices)
@@ -1021,6 +1071,9 @@ def main():
     Vp, Np_, Cp, UVp, Fp, UV1p = build_back_print(shell, lab, N, colors, aspect)
     parts["Back_Print"] = (Vp, Np_, Cp, UVp, Fp, "Back_Print_Ink")
     EXTRA_UV1["Back_Print"] = UV1p
+    Vp, Np_, Cp, UVp, Fp, UV1p = build_front_print(shell, lab, N, colors, f_aspect, f_frac)
+    parts["Front_Print"] = (Vp, Np_, Cp, UVp, Fp, "Front_Print_Ink")
+    EXTRA_UV1["Front_Print"] = UV1p
 
     print("stitching ...")
     st = build_stitching()
@@ -1051,6 +1104,7 @@ def main():
         for f in (obj, obj.with_suffix(".mtl"), *sorted(TEX_DIR.glob("*.jpg"))):
             z.write(f, f.relative_to(MODEL_DIR))
         z.write(PRINT_PNG, "textures/" + PRINT_PNG.name)
+        z.write(FRONT_PNG, "textures/" + FRONT_PNG.name)
     obj.unlink()
     obj.with_suffix(".mtl").unlink()
 
@@ -1098,6 +1152,7 @@ def write_obj(parts, path):
         "Drawcord": (CORD_HEX, "fabric_grain_color.jpg", "fleece_jersey_normal.jpg"),
         "Aglet_Gunmetal": (AGLET_HEX, None, None),
         "Back_Print_Ink": (INK_HEX, "gik_map_back_print.png", None),
+        "Front_Print_Ink": (FRONT_INK_HEX, "front_text_print.png", None),
     }
     out = []
     for m, (hx, kd, nm) in defs.items():

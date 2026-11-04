@@ -15,10 +15,11 @@
     "Rib_Cuff_Right": 2533,
     "Rib_Cuff_Left": 3855,
     "Back_Print": 25386,
+    "Front_Print": 1410,
     "Topstitching": 96600,
     "Drawcords": 8960,
     "Drawcord_Eyelets": 936,
     "Aglets": 1120
   },
-  "total_triangles": 363002
+  "total_triangles": 364412
 }
